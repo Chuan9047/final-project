@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Word Puzzle</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            margin: 20px auto;
+        }
+
+        td {
+            width: 50px;
+            height: 50px;
+            border: 1px solid black;
+            text-align: center;
+            font-size: 20px;
+        }
+
+        .selected {
+            background-color: yellow;
+        }
+
+        .word-found {
+            background-color: red;
+        }
+
+        #score {
+            text-align: center;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <table id="chessboard"></table>
+    <div id="score">Score: <span id="scoreValue">0</span></div>
+
+    <script>
+        fetch('https://raw.githubusercontent.com/your-username/your-repo/main/wordlist_test.txt')
+    .then(response => response.text())
+    .then(data => {
+        const wordList = data.split('\n').map(word => word.trim()).filter(word => word !== '');
+
+        // 在此处插入其余的代码
+    });
+
+        const chessboard = document.getElementById('chessboard');
+        const scoreValue = document.getElementById('scoreValue');
+        let score = 0;
+        let selectedCell = null;
+        let foundWords = [];
+
+        function createChessboard(rows, cols) {
+            for (let i = 0; i < rows; i++) {
+                const row = document.createElement('tr');
+                for (let j = 0; j < cols; j++) {
+                    const cell = document.createElement('td');
+                    cell.addEventListener('click', selectCell);
+                    row.appendChild(cell);
+                }
+                chessboard.appendChild(row);
+            }
+        }
+
+        function selectCell(event) {
+            if (selectedCell) {
+                selectedCell.classList.remove('selected');
+            }
+            selectedCell = event.target;
+            selectedCell.classList.add('selected');
+        }
+
+        function insertLetter(letter) {
+            selectedCell.textContent = letter;
+            selectedCell.classList.remove('selected');
+            selectedCell.removeEventListener('click', selectCell);
+            selectedCell = null;
+            checkWords();
+        }
+
+        function checkWords() {
+            let newlyFoundWords = [];
+            for (const word of words) {
+                if (!foundWords.includes(word)) {
+                    const startLetter = word[0].toLowerCase();
+                    const visited = new Set();
+                    for (const cell of document.querySelectorAll('td')) {
+                        if (cell.textContent.toLowerCase() === startLetter && !visited.has(cell)) {
+                            visited.add(cell);
+                            if (checkAdjacentCells(cell, word, 1, visited)) {
+                                newlyFoundWords.push(word);
+                                markWordFound(cell, word);
+                                break;
+                            }
+                            visited.delete(cell);
+                        }
+                    }
+                }
+            }
+            foundWords = foundWords.concat(newlyFoundWords);
+            updateScore(newlyFoundWords);
+        }
+
+        function checkAdjacentCells(cell, word, index, visited) {
+            if (index >= word.length) {
+                return true;
+            }
+
+            const rowIndex = cell.parentElement.rowIndex;
+            const colIndex = cell.cellIndex;
+            const letter = word[index].toLowerCase();
+
+            if (rowIndex > 0) {
+                const adjacentCell = chessboard.rows[rowIndex - 1].cells[colIndex];
+                if (adjacentCell.textContent.toLowerCase() === letter && !visited.has(adjacentCell)) {
+                    visited.add(adjacentCell);
+                    if (checkAdjacentCells(adjacentCell, word, index + 1, visited)) {
+                        return true;
+                    }
+                    visited.delete(adjacentCell);
+                }
+            }
+
+            if (rowIndex < chessboard.rows.length - 1) {
+                const adjacentCell = chessboard.rows[rowIndex + 1].cells[colIndex];
+                if (adjacentCell.textContent.toLowerCase() === letter && !visited.has(adjacentCell)) {
+                    visited.add(adjacentCell);
+                    if (checkAdjacentCells(adjacentCell, word, index + 1, visited)) {
+                        return true;
+                    }
+                    visited.delete(adjacentCell);
+                }
+            }
+
+            if (colIndex > 0) {
+                const adjacentCell = cell.parentElement.cells[colIndex - 1];
+                if (adjacentCell.textContent.toLowerCase() === letter && !visited.has(adjacentCell)) {
+                    visited.add(adjacentCell);
+                    if (checkAdjacentCells(adjacentCell, word, index + 1, visited)) {
+                        return true;
+                    }
+                    visited.delete(adjacentCell);
+                }
+            }
+
+            if (colIndex < cell.parentElement.cells.length - 1) {
+                const adjacentCell = cell.parentElement.cells[colIndex + 1];
+                if (adjacentCell.textContent.toLowerCase() === letter && !visited.has(adjacentCell)) {
+                    visited.add(adjacentCell);
+                    if (checkAdjacentCells(adjacentCell, word, index + 1, visited)) {
+                        return true;
+                    }
+                    visited.delete(adjacentCell);
+                }
+            }
+
+            return false;
+        }
+
+        function markWordFound(startCell, word) {
+            const direction = getWordDirection(startCell, word);
+            const rowIndex = startCell.parentElement.rowIndex;
+            const colIndex = startCell.cellIndex;
+
+            if (direction === 'horizontal') {
+                for (let i = 0; i < word.length; i++) {
+                    const currentCell = chessboard.rows[rowIndex].cells[colIndex + i];
+                    currentCell.classList.add('word-found');
+                }
+            }
+            else if (direction === 'vertical') {
+                for (let i = 0; i < word.length; i++) {
+                    const currentCell = chessboard.rows[rowIndex + i].cells[colIndex];
+                    currentCell.classList.add('word-found');
+                }
+            }
+            else if (direction === 'diagonal-down') {
+                for (let i = 0; i < word.length; i++) {
+                    const currentCell = chessboard.rows[rowIndex + i].cells[colIndex + i];
+                    currentCell.classList.add('word-found');
+                }
+            }
+            else if (direction === 'diagonal-up') {
+                for (let i = 0; i < word.length; i++) {
+                    const currentCell = chessboard.rows[rowIndex - i].cells[colIndex + i];
+                    currentCell.classList.add('word-found');
+                }
+            }
+        }
+
+        function getWordDirection(cell, word) {
+            const rowIndex = cell.parentElement.rowIndex;
+            const colIndex = cell.cellIndex;
+
+            if (colIndex + word.length <= chessboard.rows[rowIndex].cells.length) {
+                let horizontalMatch = true;
+                for (let i = 0; i < word.length; i++) {
+                    const currentCell = chessboard.rows[rowIndex].cells[colIndex + i];
+                    if (currentCell.textContent.toLowerCase() !== word[i]) {
+                        horizontalMatch = false;
+                        break;
+                    }
+                }
+                if (horizontalMatch) {
+                    return 'horizontal';
+                }
+            }
+
+            if (rowIndex + word.length <= chessboard.rows.length) {
+                let verticalMatch = true;
+                for (let i = 0; i < word.length; i++) {
+                    const currentCell = chessboard.rows[rowIndex + i].cells[colIndex];
+                    if (currentCell.textContent.toLowerCase() !== word[i]) {
+                        verticalMatch = false;
+                        break;
+                    }
+                }
+                if (verticalMatch) {
+                    return 'vertical';
+                }
+            }
+
+            if (colIndex + word.length <= chessboard.rows[rowIndex].cells.length &&
+                rowIndex + word.length <= chessboard.rows.length) {
+                let diagonalDownMatch = true;
+                for (let i = 0; i < word.length; i++) {
+                    const currentCell = chessboard.rows[rowIndex + i].cells[colIndex + i];
+                    if (currentCell.textContent.toLowerCase() !== word[i]) {
+                        diagonalDownMatch = false;
+                        break;
+                    }
+                }
+                if (diagonalDownMatch) {
+                    return 'diagonal-down';
+                }
+            }
+
+            if (colIndex + word.length <= chessboard.rows[rowIndex].cells.length &&
+                rowIndex - word.length >= -1) {
+                let diagonalUpMatch = true;
+                for (let i = 0; i < word.length; i++) {
+                    const currentCell = chessboard.rows[rowIndex - i].cells[colIndex + i];
+                    if (currentCell.textContent.toLowerCase() !== word[i]) {
+                        diagonalUpMatch = false;
+                        break;
+                    }
+                }
+                if (diagonalUpMatch) {
+                    return 'diagonal-up';
+                }
+            }
+
+            return '';
+        }
+
+        function updateScore(foundWords) {
+            score += foundWords.length;
+            scoreValue.textContent = score;
+        }
+
+        function handleKeyPress(event) {
+            const letter = event.key.toLowerCase();
+            if (selectedCell && /^[a-z]$/.test(letter)) {
+                insertLetter(letter);
+            }
+        }
+
+        const rows = 10;
+        const cols = 10;
+
+        createChessboard(rows, cols);
+        window.addEventListener('keypress', handleKeyPress);
+    </script>
+</body>
+</html>
+
